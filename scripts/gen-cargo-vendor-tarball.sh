@@ -52,6 +52,24 @@ trap 'rm -rf "$TMPDIR"' EXIT
 
 die() { echo "ERROR: $*" >&2; exit 1; }
 
+# Verify required tools are available
+for tool in zstd sha256sum curl; do
+	command -v "$tool" >/dev/null 2>&1 || \
+		die "Required tool '$tool' not found in PATH"
+done
+
+# Prefer the OpenWrt-built GNU tar over the system tar (macOS ships BSD tar
+# which lacks --sort=name and --numeric-owner).
+OW_TAR="$(ls "${TOPDIR}"/staging_dir/host/bin/tar 2>/dev/null || true)"
+if [ -n "$OW_TAR" ] && "$OW_TAR" --version 2>/dev/null | grep -q 'GNU tar'; then
+	TAR="$OW_TAR"
+elif tar --version 2>/dev/null | grep -q 'GNU tar'; then
+	TAR=tar
+else
+	die "GNU tar is required (--sort=name, --numeric-owner)." \
+	    "Build OpenWrt host tools first or install GNU tar."
+fi
+
 # Resolve cargo: use OpenWrt-built cargo; abort if not found.
 # The OpenWrt cargo is installed by toolchain/rust into staging_dir/host/bin/.
 # This script is called either by DownloadMethod (after toolchain/rust/compile)
@@ -72,7 +90,7 @@ fi
 make_tarball() {
 	local srcdir="$1"   # directory to pack (relative to cwd)
 	local outfile="$2"  # output path
-	tar \
+	"$TAR" \
 		--numeric-owner --owner=0 --group=0 \
 		--mode=a-s --sort=name \
 		--mtime='@0' \
@@ -120,7 +138,7 @@ crate)
 	echo ">>> Extracting ..."
 	mkdir -p "${TMPDIR}/src"
 	# .crate files are tar.gz archives
-	tar -xzf "$CRATE_PATH" -C "${TMPDIR}/src"
+	"$TAR" -xzf "$CRATE_PATH" -C "${TMPDIR}/src"
 
 	SRCDIR="${TMPDIR}/src/${NAME}-${VERSION}"
 	[[ -d "$SRCDIR" ]] || die "Expected directory ${NAME}-${VERSION}/ in crate"
@@ -195,7 +213,7 @@ github)
 
 	echo ">>> Extracting ..."
 	mkdir -p "${TMPDIR}/src"
-	tar -xzf "$ARCHIVE_PATH" -C "${TMPDIR}/src"
+	"$TAR" -xzf "$ARCHIVE_PATH" -C "${TMPDIR}/src"
 
 	SRCDIR="${TMPDIR}/src/${EXTRACTED_DIR}"
 	[[ -d "$SRCDIR" ]] || \
