@@ -132,8 +132,8 @@ define Build/InstallDev
 	( \
 		cd $(PKG_BUILD_DIR)/build/dist ; \
 		for targz in rust-std-*-$(RUSTC_TARGET_ARCH).tar.gz; do \
-			[ -f "$$targz" ] || continue; \
-			$(STAGING_DIR_HOST)/bin/libdeflate-gzip -dc "$$targz" | tar -xf - ; \
+			[ -f "$$$$targz" ] || continue; \
+			$(STAGING_DIR_HOST)/bin/libdeflate-gzip -dc "$$$$targz" | tar -xf - ; \
 		done ; \
 		find . -mindepth 2 -maxdepth 2 -type f -name install.sh \
 			-execdir bash '{}' --prefix=$(STAGING_DIR_HOST) --disable-ldconfig \; ; \

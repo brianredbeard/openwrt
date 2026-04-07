@@ -73,8 +73,8 @@ define Host/Install
 	( \
 		cd $(HOST_BUILD_DIR)/build/dist ; \
 		for targz in rustc-* cargo-* llvm-tools-* rust-src-*.tar.gz; do \
-			[ -f "$$targz" ] || continue; \
-			$(STAGING_DIR_HOST)/bin/libdeflate-gzip -dc "$$targz" | tar -xf - ; \
+			[ -f "$$$$targz" ] || continue; \
+			$(STAGING_DIR_HOST)/bin/libdeflate-gzip -dc "$$$$targz" | tar -xf - ; \
 		done ; \
 		find . -mindepth 2 -maxdepth 2 -type f -name install.sh \
 			-execdir bash '{}' --prefix=$(STAGING_DIR_HOST) --disable-ldconfig \; ; \
@@ -170,8 +170,8 @@ define Host/Prepare
 		$(DL_DIR)/cargo-$(PKG_VERSION)-$(RUSTC_HOST_ARCH).tar.xz \
 		$(DL_DIR)/llvm-tools-$(PKG_VERSION)-$(RUSTC_HOST_ARCH).tar.xz \
 		$(DL_DIR)/rust-src-$(PKG_VERSION).tar.xz; do \
-		[ -f "$$xz" ] || continue; \
-		tar -xf "$$xz"; \
+		[ -f "$$$$xz" ] || continue; \
+		tar -xf "$$$$xz"; \
 	done && \
 	find . -mindepth 2 -maxdepth 2 -type f -name install.sh \
 		-execdir bash '{}' --prefix=$(STAGING_DIR_HOST) --disable-ldconfig \;
