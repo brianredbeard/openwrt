@@ -26,9 +26,15 @@ include $(RUST_INCLUDE_DIR)/rust-values.mk
 
 RUST_PKG_LOCKED ?= 1
 
+# CC/CXX point at the target compiler so the cc crate compiles C for the
+# correct architecture.  HOST_CC/HOST_CXX are for build-script (build.rs)
+# compilation that runs on the host.
 CARGO_PKG_VARS= \
 	$(CARGO_PKG_CONFIG_VARS) \
-	CC=$(HOSTCC_NOCACHE) \
+	CC=$(TARGET_CC_NOCACHE) \
+	HOST_CC=$(HOSTCC_NOCACHE) \
+	CXX=$(TARGET_CXX_NOCACHE) \
+	HOST_CXX=$(HOSTCXX_NOCACHE) \
 	MAKEFLAGS="$(PKG_JOBS)"
 
 CARGO_PKG_ARGS := --offline
@@ -45,21 +51,24 @@ endif
 # scripts/gen-cargo-vendor-tarball.sh.
 define Build/Compile/Cargo
 	+$(CARGO_PKG_VARS) \
-	cargo install -v \
-		--profile $(CARGO_PKG_PROFILE) \
+	$(CARGO) build -v \
+		$(if $(filter release,$(CARGO_PKG_PROFILE)),--release) \
 		$(if $(strip $(RUST_PKG_FEATURES)),--features "$(strip $(RUST_PKG_FEATURES))") \
-		--root $(PKG_INSTALL_DIR) \
-		--path "$(PKG_BUILD_DIR)/$(if $(strip $(1)),$(strip $(1)),$(strip $(MAKE_PATH)))" \
+		--manifest-path "$(PKG_BUILD_DIR)/$(if $(strip $(1)),$(strip $(1)),$(strip $(MAKE_PATH)))/Cargo.toml" \
 		$(if $(filter --jobserver%,$(PKG_JOBS)),,-j1) \
 		$(CARGO_PKG_ARGS) \
 		$(2)
 endef
 
+# Helper for packages that install a single binary.  The binary name defaults
+# to the package name $(1); override Package/$(1)/install for other layouts.
 define RustBinPackage
   ifndef Package/$(1)/install
     define Package/$(1)/install
 	$$(INSTALL_DIR) $$(1)/usr/bin/
-	$$(INSTALL_BIN) $$(PKG_INSTALL_DIR)/bin/* $$(1)/usr/bin/
+	$$(INSTALL_BIN) \
+		$$(PKG_BUILD_DIR)/target/$(RUSTC_TARGET_ARCH)/$(CARGO_PKG_OUTPUT_DIR)/$(1) \
+		$$(1)/usr/bin/
     endef
   endif
 endef

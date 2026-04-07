@@ -45,12 +45,6 @@ endif
 
 CARGO_RUSTFLAGS+=-Ctarget-feature=-crt-static $(RUSTC_LDFLAGS)
 
-# Dynamically link against libstd.so instead of bundling it statically.
-# libstd-HASH.so is packaged as package/libs/libstd-rust and ships on-device.
-# Only affects target (PKG) builds via CARGO_PKG_CONFIG_VARS/RUSTFLAGS;
-# host tools (bindgen, cbindgen) use CARGO_HOST_CONFIG_VARS which omits RUSTFLAGS.
-CARGO_RUSTFLAGS+=-C prefer-dynamic
-
 ifeq ($(HOST_OS),Darwin)
   ifeq ($(HOST_ARCH),arm64)
     RUSTC_HOST_ARCH:=aarch64-apple-darwin
@@ -141,6 +135,13 @@ CARGO_HOST_CONFIG_VARS= \
 
 CARGO_HOST_PROFILE:=release
 
+# Dynamic linking of libstd.  Default ON for embedded targets: many small Rust
+# binaries on the same device share the ~3 MB libstd.so, saving flash/RAM.
+# Override per-package with RUST_PREFER_DYNAMIC:=0 for packages that must be
+# fully static (e.g., single-binary appliances, or crates with features
+# incompatible with dynamic libstd).
+RUST_PREFER_DYNAMIC ?= 1
+
 CARGO_PKG_CONFIG_VARS= \
 	CARGO_BUILD_TARGET=$(RUSTC_TARGET_ARCH) \
 	CARGO_HOME=$(CARGO_HOME) \
@@ -153,10 +154,11 @@ CARGO_PKG_CONFIG_VARS= \
 	CARGO_PROFILE_RELEASE_PANIC=$(if $(CONFIG_DEBUG),unwind,abort) \
 	CARGO_PROFILE_RELEASE_RPATH=false \
 	CARGO_TARGET_$(subst -,_,$(call toupper,$(RUSTC_TARGET_ARCH)))_LINKER=$(TARGET_CC_NOCACHE) \
-	RUSTFLAGS="$(CARGO_RUSTFLAGS)" \
+	RUSTFLAGS="$(CARGO_RUSTFLAGS) $(if $(filter 1,$(RUST_PREFER_DYNAMIC)),-C prefer-dynamic)" \
 	TARGET_CC=$(TARGET_CC_NOCACHE) \
 	TARGET_CFLAGS="$(TARGET_CFLAGS) $(RUSTC_CFLAGS)"
 
 CARGO_PKG_PROFILE:=$(if $(CONFIG_DEBUG),dev,release)
+CARGO_PKG_OUTPUT_DIR:=$(if $(CONFIG_DEBUG),debug,release)
 
 CARGO_RUSTFLAGS+=-Clink-arg=-fuse-ld=$(TARGET_LINKER)
