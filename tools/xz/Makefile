@@ -30,6 +30,18 @@ HOST_CONFIGURE_ARGS += \
 	--disable-nls \
 	--with-pic
 
+# xz 5.8.3 configure's AC_TYPE_INT32_T et al. fail when the host-build
+# framework injects -I$(STAGING_DIR_HOST)/include, which disrupts GCC 15's
+# C23-conformant header resolution.  Pre-seed the cache so configure skips
+# these broken autoconf checks.
+HOST_CONFIGURE_VARS += \
+	ac_cv_c_int32_t=yes \
+	ac_cv_c_int64_t=yes \
+	ac_cv_c_uint16_t=yes \
+	ac_cv_c_uint32_t=yes \
+	ac_cv_c_uint64_t=yes \
+	ac_cv_sizeof_size_t=$(if $(filter x86_64 aarch64,$(HOST_ARCH)),8,4)
+
 define Host/Install
 	+$(MAKE) $(HOST_JOBS) -C $(HOST_BUILD_DIR) install xzlinks="unxz xzcat"
 endef
