@@ -337,17 +337,45 @@ config GDB_PYTHON
 comment "Rust Toolchain"
 	depends on TOOLCHAINOPTS
 
-config USE_RUST_TOOLCHAIN
-	bool
-	prompt "Build Rust toolchain" if TOOLCHAINOPTS
+choice
+	prompt "Rust toolchain" if TOOLCHAINOPTS
+	default RUST_TOOLCHAIN_NONE
 	depends on aarch64||arm||i386||loongarch64||mips \
 		||(!(MIPS64_ABI_N32)&&mips64)||(!(MIPS64_ABI_N32)&&mips64el) \
 		||mipsel||(!(HAS_SPE_FPU)&&powerpc)||(!(HAS_SPE_FPU)&&powerpc64) \
 		||riscv64||x86_64
-	default n
-	help
-	  Builds rustc, cargo, and rust-std as part of the toolchain. Required
-	  for Rust packages and kernel Rust support. Adds significant build time.
+
+	config RUST_TOOLCHAIN_NONE
+		bool "None"
+
+	config RUST_TOOLCHAIN_PREBUILT
+		bool "Use prebuilt Rust toolchain"
+		select USE_RUST_PREBUILT
+		help
+		  Downloads pre-built rustc, cargo, rust-src, and llvm-tools from
+		  static.rust-lang.org/dist/ instead of building from source.  Much
+		  faster than a source build but requires network access during the
+		  initial download.  Cross rust-std for the target is still built
+		  from source via package/libs/libstd-rust.
+
+	config RUST_TOOLCHAIN_BUILD
+		bool "Build Rust toolchain from source"
+		select USE_RUST_BUILD
+		help
+		  Builds rustc, cargo, and rust-std entirely from source.  Adds
+		  significant build time (~30-60 min) but produces a fully
+		  self-contained toolchain with no external downloads.
+endchoice
+
+config USE_RUST_PREBUILT
+	bool
+
+config USE_RUST_BUILD
+	bool
+
+config USE_RUST_TOOLCHAIN
+	default y if !RUST_TOOLCHAIN_NONE
+	bool
 
 config KERNEL_RUST
 	bool
